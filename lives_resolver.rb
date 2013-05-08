@@ -3,13 +3,17 @@ require 'mongo'
 require 'pry'
 require 'csv'
 
+# Need to make Mongo connection info args & initialized
 class LivesResolver
 
   include Mongo
-  # Set up (or re-establish connection to) data store
-  @@mongo_client = MongoClient.new("localhost", 27017)
-  @@db = @@mongo_client.db("factual-test")
-  @@coll = @@db["factual-data-2"]
+
+  def initialize()
+    # Set up (or re-establish connection to) data store
+    @@mongo_client = MongoClient.new("localhost", 27017)
+    @@db = @@mongo_client.db("factual-test")
+    @@coll = @@db["factual-data-2"]
+  end
 
   def resolve_csv(file_path)
     factual = Factual.new(ENV["FACTUAL_KEY"], ENV["FACTUAL_SECRET"], debug: false)
@@ -44,7 +48,7 @@ class LivesResolver
     opened_file = File.open(input_csv_path) { |f| f.read }
     parsed_lives_data = CSV.parse opened_file, headers: true
 
-    # For each restaurant in CSV without Factual data in Mongo, create a JSON object with LIVES data and Yelp ID
+    # For each restaurant in CSV without Factual data in Mongo, save to output csv 
     output_data = Array.new
     output_data[0] = parsed_lives_data.headers
     parsed_lives_data.each do |lives_csv_row|
