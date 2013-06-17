@@ -3,6 +3,8 @@ require 'mongo'
 require 'pry'
 require 'csv'
 
+
+
 # Need to make Mongo connection info args & initialized
 class LivesResolver
 
@@ -11,17 +13,22 @@ class LivesResolver
   def initialize()
     # Set up (or re-establish connection to) data store
     @@mongo_client = MongoClient.new("localhost", 27017)
-    @@db = @@mongo_client.db("factual-test")
-    @@coll = @@db["factual-data-2"]
+    @@db = @@mongo_client.db(@mongo_db_name)
+    @@coll = @@db[@mongo_coll_name]
   end
 
   def resolve_csv(file_path)
-    factual = Factual.new(ENV["FACTUAL_KEY"], ENV["FACTUAL_SECRET"], debug: false)
+    factual = Factual.new(ENV["FACTUAL_KEY"], ENV["FACTUAL_SECRET"], debug: true)
     counter = 1
+    last_id = nil
     CSV.foreach(file_path, :headers => :true) do |row|
-      if @@coll.find("id"=>row["id"]).to_a.count == 0
-        hash_input = { name: row["name"], address: row["address1"], locality: "San Francisco", region: "CA", postcode: row["zip"] }
-        lives_id = row["id"]
+      if ((row[@local_id_field] != last_id) && (@@coll.find("id"=>row[@local_id_field]).to_a.count == 0))
+        hash_input = {  name: row[@name_field], 
+                        address: row[@address_field], 
+                        locality: row[@locality_field] || @locality_default, 
+                        region: row[@region_field] || @region_default, 
+                        postcode: row[@postcode_field] }
+        lives_id = row[@local_id_field]
         begin
           query = factual.resolve(hash_input)
           factual_response = query.first
@@ -41,6 +48,7 @@ class LivesResolver
         p "#{counter} skipping -- already done (or to be skipped)"
       end
       counter += 1
+      last_id = row[@local_id_field]
     end
   end
 
@@ -66,8 +74,39 @@ class LivesResolver
 
 end
 
+class KingCountyLivesResolver < LivesResolver
+  def initialize()
+    @local_id_field = "Business_ID"
+    @name_field = "Name"
+    @address_field = "Address"
+    @locality_field = "City"
+    @region_field = "State"
+    @region_default = "WA"
+    @postcode_field = "Zip Code"
+    @mongo_db_name = "factual-test"
+    @mongo_coll_name = "factual-data-king-2"
+    super
+  end
+end
 
-#LivesResolver.resolve_csv("./lives-sf.csv")
+class SFLivesResolver < LivesResolver
+  def initialize()
+    @local_id_field = "id"
+    @name_field = "name"
+    @address_field = "address1"
+    @locality_field = "" # SF data doesn't have this field, so supply a default
+    @locality_default = "San Francisco"
+    @region_field = "" # SF data doesn't have this field, so supply a default
+    @region_default = "CA"
+    @postcode_field = "zip"
+    @mongo_db_name = "factual-test"
+    @mongo_coll_name = "factual-data-sf-2"
+    super
+  end
+end
+
+lr = KingCountyLivesResolver.new
+lr.resolve_csv("./Food_Establishment_Inspection_Data.csv")
 
 #l = LivesResolver.new
 #l.output_unmatched_to_json("./lives-sf.csv", "./unmatched-LIVES-SF-restaurants.csv")
