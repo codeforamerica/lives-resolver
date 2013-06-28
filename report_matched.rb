@@ -20,6 +20,12 @@ class MatchReporter
     unmatched_filename = @results_db + "." + @results_coll + "." + "unmatched.txt"
     File.open(matched_filename, "w") do |matched|
       File.open(unmatched_filename, "w") do |unmatched|
+        # write column headings
+        unmatched.write(results_fields.join("\t"))
+        unmatched.write("\n")
+        matched.write(results_fields.join("\t"))
+        matched.write("\tid\n")
+
         @coll.find().each do |record|
           puts record
           results_row_array = [record['id']]
