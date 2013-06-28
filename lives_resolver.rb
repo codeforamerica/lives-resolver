@@ -110,8 +110,11 @@ class SFLivesResolver < LivesResolver
   end
 end
 
-lr = KingCountyLivesResolver.new
-lr.resolve_csv("king_county/Food_Establishment_Inspection_Data.csv")
+# lr = KingCountyLivesResolver.new
+# lr.resolve_csv("king_county/Food_Establishment_Inspection_Data.csv")
+
+lr = SFLivesResolver.new
+lr.resolve_csv("san_francisco/lives-sf.csv")
 
 #l = LivesResolver.new
 #l.output_unmatched_to_json("./lives-sf.csv", "./unmatched-LIVES-SF-restaurants.csv")
